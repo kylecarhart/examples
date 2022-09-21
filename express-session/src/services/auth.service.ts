@@ -1,4 +1,4 @@
-import { compareSync, genSalt, hash } from "bcrypt";
+import { compare, genSalt, hash } from "bcrypt";
 import db from "../db/index.js";
 import jwt from "jsonwebtoken";
 import { JWT_SECRET } from "../env/index.js";
@@ -17,8 +17,12 @@ export async function login(
   const { users } = db.data!;
   const user = users.find((_user) => _user.username === username);
 
-  // Check user exists and password is correct
-  if (!user || !compareSync(password, user.password)) {
+  if (!user) {
+    throw new HTTPException(401, "Invalid login");
+  }
+
+  const isGoodPass = await compare(password, user.password);
+  if (!isGoodPass) {
     throw new HTTPException(401, "Invalid login");
   }
 
