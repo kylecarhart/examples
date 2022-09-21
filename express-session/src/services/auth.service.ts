@@ -1,4 +1,4 @@
-import { compareSync } from "bcrypt";
+import { compareSync, genSalt, hash } from "bcrypt";
 import db from "../db/index.js";
 import jwt from "jsonwebtoken";
 import { JWT_SECRET } from "../env/index.js";
@@ -10,7 +10,10 @@ import { HTTPException } from "@exceptions/http.exception.js";
  * @param password
  * @returns JSON Web Token
  */
-export function login(username: string, password: string): string {
+export async function login(
+  username: string,
+  password: string
+): Promise<string> {
   const { users } = db.data!;
   const user = users.find((_user) => _user.username === username);
 
@@ -25,4 +28,27 @@ export function login(username: string, password: string): string {
     audience: "user",
     subject: username,
   });
+}
+
+/**
+ * Sign the user up
+ * @param username
+ * @param password
+ */
+export async function signup(
+  username: string,
+  password: string
+): Promise<void> {
+  const { users } = db.data!;
+
+  if (users.find((user) => user.username === username)) {
+    throw new HTTPException(409, "Username already taken");
+  }
+
+  // Hash the password
+  const salt = await genSalt(10);
+  const hashPw = await hash(password, salt);
+
+  db.data!.users.push({ username, password: hashPw });
+  await db.write();
 }
